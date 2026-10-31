@@ -30,7 +30,14 @@ export class UserService {
     const passwordHash = await argon2.hash(password);
 
     const user = await prisma.users.create({
-      data: { name, email, address, adm, login, password: passwordHash },
+      data: {
+        name,
+        email,
+        address,
+        adm: false,
+        login,
+        password: passwordHash,
+      },
     });
 
     return user;

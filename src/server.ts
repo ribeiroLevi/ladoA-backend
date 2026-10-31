@@ -17,6 +17,7 @@ import { fastifySession } from "@fastify/session";
 import { categoryRoutes } from "./routes/categories-routes.js";
 import { productRoutes } from "./routes/products-routes.js";
 import { saleRoutes } from "./routes/sale-routes.js";
+import cors from "@fastify/cors";
 
 import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
@@ -31,6 +32,12 @@ await app.register(multipart, {
   },
 });
 
+await app.register(cors, {
+  origin: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
+});
 await app.register(fastifyStatic, {
   root: path.join(process.cwd(), "uploads"),
   prefix: "/uploads/",
@@ -47,8 +54,6 @@ app.register(fastifySession, {
     secure: false,
   },
 });
-
-app.register(fastifyCors, { origin: "*" });
 
 app.register(fastifySwagger, {
   openapi: {

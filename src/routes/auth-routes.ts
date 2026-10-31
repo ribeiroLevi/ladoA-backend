@@ -40,8 +40,8 @@ export async function authRoutes(app: FastifyTypedInstanc) {
         response: {
           200: z.object({
             id: z.string(),
-            //login: z.string(),
-            //adm: z.boolean(),
+            login: z.string(),
+            adm: z.boolean(),
           }),
           401: z.object({
             message: z.string(),

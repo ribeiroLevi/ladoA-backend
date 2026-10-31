@@ -27,7 +27,11 @@ export async function userRoutes(app: FastifyTypedInstanc) {
         params: z.object({ id: z.string() }),
         response: {
           200: z.object({
-            id: string(),
+            id: z.uuid(),
+            name: z.string(),
+            address: z.string(),
+            email: z.email(),
+            login: z.string(),
           }),
         },
       },
@@ -93,7 +97,6 @@ export async function userRoutes(app: FastifyTypedInstanc) {
           address: z.string(),
           login: z.string(),
           password: z.string(),
-          adm: z.boolean(),
         }),
         response: {
           201: z.object({

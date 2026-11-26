@@ -5,12 +5,9 @@ import {
   DeleteProductParams,
   FindProductParams,
   PatchProductsParams,
-  UpdateProductDTO,
-  createProductSchema,
+  UpdateProductBody,
 } from "../types/product.js";
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
-import crypto from "node:crypto";
+import { deletePicture, savePicture } from "../utils/picture.js";
 
 export class ProductController {
   private productService: ProductService;
@@ -30,30 +27,41 @@ export class ProductController {
         picture: Buffer;
       };
 
-    const uploadDirectory = path.join(process.cwd(), "uploads", "products");
+    let picturePath: string | undefined;
 
-    await mkdir(uploadDirectory, {
-      recursive: true,
-    });
+    try {
+      picturePath = await savePicture(picture);
 
-    const filename = `${crypto.randomUUID()}.jpg`;
+      const product = await this.productService.executeCreateProduct({
+        name,
+        description,
+        quantity,
+        price,
+        category_id,
+        picture: picturePath,
+      });
 
-    const filePath = path.join(uploadDirectory, filename);
+      // Nome já existente: só somou a quantidade, então a foto nova não é usada
+      if (product.picture !== picturePath) {
+        await deletePicture(picturePath);
+      }
 
-    await writeFile(filePath, picture);
+      return reply.status(201).send(product);
+    } catch (error) {
+      if (picturePath) {
+        await deletePicture(picturePath);
+      }
 
-    const picturePath = `/uploads/products/${filename}`;
+      if (error instanceof Error && error.message == "Invalid image type") {
+        return reply.status(400).send({ message: error.message });
+      }
 
-    const product = await this.productService.executeCreateProduct({
-      name,
-      description,
-      quantity,
-      price,
-      category_id,
-      picture: picturePath,
-    });
+      if (error instanceof Error && error.message == "Category does not exist") {
+        return reply.status(404).send({ message: error.message });
+      }
 
-    return reply.status(201).send(product);
+      return reply.status(500).send({ message: "Internal Server Error" });
+    }
   }
 
   async listProducts(reply: FastifyReply) {
@@ -83,17 +91,40 @@ export class ProductController {
 
   async updateProduct(
     request: FastifyRequest<{
-      Body: UpdateProductDTO;
+      Body: UpdateProductBody;
       Params: PatchProductsParams;
     }>,
     reply: FastifyReply,
   ) {
+    let picturePath: string | null | undefined;
+
     try {
-      const data = request.body;
+      const { picture, remove_picture, ...data } = request.body;
       const params = request.params;
-      await this.productService.updateProduct(data, params.id);
+
+      if (remove_picture === "true") {
+        picturePath = null;
+      }
+
+      if (picture && picture.length > 0) {
+        picturePath = await savePicture(picture);
+      }
+
+      await this.productService.updateProduct(
+        { ...data, picture: picturePath },
+        params.id,
+      );
+
       return reply.status(200).send("Product Updated Sucessfully");
     } catch (error) {
+      if (picturePath) {
+        await deletePicture(picturePath);
+      }
+
+      if (error instanceof Error && error.message == "Invalid image type") {
+        return reply.status(400).send({ message: error.message });
+      }
+
       if (error instanceof Error && error.message == "Product does not exist") {
         return reply.status(404).send({
           message: error.message,

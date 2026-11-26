@@ -17,7 +17,17 @@ export interface UpdateProductDTO {
   name?: string;
   description?: string;
   quantity?: number;
-  picture?: string;
+  picture?: string | null;
+  price?: number;
+  category_id?: string;
+}
+
+export interface UpdateProductBody {
+  name?: string;
+  description?: string;
+  quantity?: number;
+  picture?: Buffer;
+  remove_picture?: string;
   price?: number;
   category_id?: string;
 }

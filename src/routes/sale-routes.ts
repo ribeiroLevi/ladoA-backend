@@ -46,7 +46,7 @@ export async function saleRoutes(app: FastifyTypedInstanc) {
         description: "Retornar todas as compras do sistemas para usuários ADM",
       },
     },
-    salesController.listUserSales.bind(salesController),
+    salesController.listAllSales.bind(salesController),
   );
 
   app.post(

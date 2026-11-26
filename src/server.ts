@@ -1,7 +1,6 @@
 import "dotenv/config";
 
 import { fastify } from "fastify";
-import { fastifyCors } from "@fastify/cors";
 import {
   validatorCompiler,
   serializerCompiler,
@@ -33,7 +32,7 @@ await app.register(multipart, {
 });
 
 await app.register(cors, {
-  origin: true,
+  origin: process.env.FRONTEND_URL ?? "http://localhost:3000",
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
@@ -49,7 +48,7 @@ app.setSerializerCompiler(serializerCompiler);
 app.register(fastifyCookie);
 
 app.register(fastifySession, {
-  secret: "5tgA{?!pBkG)0]8Bkx+!pJcJY#[U(:&2",
+  secret: process.env.SESSION_SECRET!,
   cookie: {
     secure: false,
   },
@@ -80,10 +79,6 @@ app.register(authRoutes);
 app.register(categoryRoutes);
 app.register(productRoutes);
 app.register(saleRoutes);
-
-app.ready().then(() => {
-  console.log(JSON.stringify(app.swagger(), null, 2));
-});
 
 //porta da API
 app.listen({ port: 3333 }).then(() => {

@@ -23,6 +23,14 @@ export class SalesController {
       });
       return reply.status(201).send({ sale_id: sale.id });
     } catch (error) {
+      if (error instanceof Error && error.message == "Produto inexistente") {
+        return reply.status(400).send({ message: error.message });
+      }
+
+      if (error instanceof Error && error.message == "Estoque insuficiente") {
+        return reply.status(409).send({ message: error.message });
+      }
+
       return reply.status(500).send({ message: "Internal Server Error" });
     }
   }
@@ -49,7 +57,7 @@ export class SalesController {
       await this.salesService.deleteSale(id);
       return reply.status(200).send("Sale Deleted Sucessfully");
     } catch (error) {
-      if (error instanceof Error && error.message == "Sale not ") {
+      if (error instanceof Error && error.message == "Sale not found") {
         return reply.status(404).send({
           message: error.message,
         });

@@ -1,6 +1,5 @@
 import { SaleProduct } from "../types/sales.js";
 import { prisma } from "../database/prisma.js";
-import { productRoutes } from "../routes/products-routes.js";
 
 interface CreateSaleService {
   userId: string;
@@ -26,7 +25,22 @@ export class SaleService {
   }
 
   async listAllSales() {
-    const salesDB = await prisma.sales.findMany();
+    const salesDB = await prisma.sales.findMany({
+      include: {
+        sale_products: {
+          include: {
+            products: true,
+          },
+        },
+        users: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
     return salesDB;
   }
 
@@ -64,7 +78,7 @@ export class SaleService {
         },
       });
 
-      if (!product) {
+      if (!product || !product.active) {
         throw new Error("Produto inexistente");
       }
 
@@ -87,7 +101,7 @@ export class SaleService {
           },
         });
 
-        if (!product) {
+        if (!product || !product.active) {
           throw new Error("Produto inexistente");
         }
 

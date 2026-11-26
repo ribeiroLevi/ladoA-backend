@@ -1,7 +1,7 @@
 import z from "zod";
 import { FastifyTypedInstanc } from "../types/fastify.js";
 import { ProductController } from "../controllers/products-controller.js";
-import { requireAuth } from "../middleware/auth-middleware.js";
+import { requireAdminAuth } from "../middleware/adminauth-middleware.js";
 
 export async function productRoutes(app: FastifyTypedInstanc) {
   const productController = new ProductController();
@@ -9,6 +9,7 @@ export async function productRoutes(app: FastifyTypedInstanc) {
   app.post(
     "/product",
     {
+      preHandler: requireAdminAuth,
       schema: {
         tags: ["Products"],
         description: "Cria um novo produto",
@@ -54,7 +55,7 @@ export async function productRoutes(app: FastifyTypedInstanc) {
   app.delete(
     "/product/:id",
     {
-      preHandler: requireAuth,
+      preHandler: requireAdminAuth,
       schema: {
         tags: ["Products"],
         description: "Deleção de Produtos",
@@ -97,19 +98,30 @@ export async function productRoutes(app: FastifyTypedInstanc) {
   app.patch(
     "/product/:id",
     {
+      preHandler: requireAdminAuth,
       schema: {
         tags: ["Products"],
-        description: "Atualização de Produtos",
+        description:
+          "Atualização de Produtos (JSON ou multipart/form-data). Envie picture para trocar a foto ou remove_picture=true para removê-la",
+        consumes: ["multipart/form-data", "application/json"],
         params: z.object({
           id: z.uuid(),
         }),
         body: z.object({
           name: z.string().optional(),
           description: z.string().optional(),
-          quantity: z.number().optional(),
-          picture: z.string().optional(),
-          price: z.number().optional(),
+          quantity: z.coerce.number().optional(),
+          price: z.coerce.number().optional(),
           category_id: z.string().optional(),
+          remove_picture: z.coerce.string().optional(),
+
+          picture: z
+            .instanceof(Buffer)
+            .meta({
+              type: "string",
+              format: "binary",
+            })
+            .optional(),
         }),
         response: {
           200: z.object({

@@ -15,11 +15,11 @@ export async function requireAdminAuth(
     where: { id: userId },
   });
 
-  if (!user?.adm) {
-    return reply.status(403).send({ message: "Forbidden" });
-  }
-
   if (!user) {
     return reply.status(401).send({ message: "Unauthorized" });
+  }
+
+  if (!user.adm) {
+    return reply.status(403).send({ message: "Forbidden" });
   }
 }

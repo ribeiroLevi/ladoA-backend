@@ -9,7 +9,7 @@ export async function authRoutes(app: FastifyTypedInstanc) {
     "/auth/login",
     {
       schema: {
-        tags: ["auth"],
+        tags: ["Auth"],
         description: "Valida a tentativa de login.",
         body: z.object({
           login: z.string(),
@@ -34,14 +34,14 @@ export async function authRoutes(app: FastifyTypedInstanc) {
     "/auth/me",
     {
       schema: {
-        tags: ["auth"],
+        tags: ["Auth"],
         description:
           "Retorno o ID do usuário atual na sessão a partir de Cookie de sessão",
         response: {
           200: z.object({
             id: z.string(),
-            //login: z.string(),
-            //adm: z.boolean(),
+            login: z.string(),
+            adm: z.boolean(),
           }),
           401: z.object({
             message: z.string(),
@@ -56,7 +56,7 @@ export async function authRoutes(app: FastifyTypedInstanc) {
     "/auth/logout",
     {
       schema: {
-        tags: ["auth"],
+        tags: ["Auth"],
         description: "Destrói a sessão do usuário atual",
       },
     },

@@ -60,6 +60,16 @@ export class CategoryController {
           message: error.message,
         });
       }
+
+      if (
+        error instanceof Error &&
+        error.message === "Category has products"
+      ) {
+        return reply.status(409).send({
+          message: error.message,
+        });
+      }
+
       return reply.status(500).send({
         message: "Internal Server Error",
       });
@@ -67,19 +77,23 @@ export class CategoryController {
   }
 
   async updateCategory(
-    request: FastifyRequest<{ Body: UpdateCategory }>,
+    request: FastifyRequest<{
+      Body: UpdateCategory;
+      Params: DeleterCategoryParams;
+    }>,
     reply: FastifyReply,
   ) {
     try {
       const data = request.body;
-      await this.categoriesService.updateCategory(data, data.id);
+      const { id } = request.params;
+      await this.categoriesService.updateCategory(data, id);
       return reply.status(200).send("Category Updated Sucessfully");
     } catch (error) {
       if (
         error instanceof Error &&
         error.message === "Category does not exist"
       ) {
-        return reply.status(400).send({
+        return reply.status(404).send({
           message: error.message,
         });
       }

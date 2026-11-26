@@ -1,7 +1,7 @@
 import z from "zod";
 import { FastifyTypedInstanc } from "../types/fastify.js";
-import { id } from "zod/locales";
 import { ProductController } from "../controllers/products-controller.js";
+import { requireAdminAuth } from "../middleware/adminauth-middleware.js";
 
 export async function productRoutes(app: FastifyTypedInstanc) {
   const productController = new ProductController();
@@ -9,15 +9,26 @@ export async function productRoutes(app: FastifyTypedInstanc) {
   app.post(
     "/product",
     {
+      preHandler: requireAdminAuth,
       schema: {
         tags: ["Products"],
         description: "Cria um novo produto",
+
+        consumes: ["multipart/form-data"],
+
         body: z.object({
           name: z.string(),
           description: z.string(),
-          quantity: z.string(),
-          picture: z.string(),
+          quantity: z.coerce.number(),
+          price: z.coerce.number(),
+          category_id: z.uuid(),
+
+          picture: z.instanceof(Buffer).meta({
+            type: "string",
+            format: "binary",
+          }),
         }),
+
         response: {
           201: z.object({
             id: z.uuid(),
@@ -28,9 +39,8 @@ export async function productRoutes(app: FastifyTypedInstanc) {
     },
     productController.createProduct.bind(productController),
   );
-
   app.get(
-    "/products",
+    "/product",
     {
       schema: {
         tags: ["Products"],
@@ -38,13 +48,14 @@ export async function productRoutes(app: FastifyTypedInstanc) {
       },
     },
     (request, reply) => {
-      return productController.listUser(reply);
+      return productController.listProducts(reply);
     },
   );
 
   app.delete(
     "/product/:id",
     {
+      preHandler: requireAdminAuth,
       schema: {
         tags: ["Products"],
         description: "Deleção de Produtos",
@@ -57,5 +68,68 @@ export async function productRoutes(app: FastifyTypedInstanc) {
       },
     },
     (request, reply) => productController.deleteProduct(request, reply),
+  );
+
+  app.get(
+    "/product/:id",
+    {
+      schema: {
+        tags: ["Products"],
+        description: "Busca um produto",
+        params: z.object({ id: z.string() }),
+        response: {
+          200: z.object({
+            id: z.string(),
+            name: z.string(),
+            description: z.string(),
+            price: z.number(),
+            picture: z.string().nullable(),
+            quantity: z.number(),
+            category_id: z.string(),
+          }),
+        },
+      },
+    },
+    (request, reply) => {
+      return productController.findProduct(request, reply);
+    },
+  );
+
+  app.patch(
+    "/product/:id",
+    {
+      preHandler: requireAdminAuth,
+      schema: {
+        tags: ["Products"],
+        description:
+          "Atualização de Produtos (JSON ou multipart/form-data). Envie picture para trocar a foto ou remove_picture=true para removê-la",
+        consumes: ["multipart/form-data", "application/json"],
+        params: z.object({
+          id: z.uuid(),
+        }),
+        body: z.object({
+          name: z.string().optional(),
+          description: z.string().optional(),
+          quantity: z.coerce.number().optional(),
+          price: z.coerce.number().optional(),
+          category_id: z.string().optional(),
+          remove_picture: z.coerce.string().optional(),
+
+          picture: z
+            .instanceof(Buffer)
+            .meta({
+              type: "string",
+              format: "binary",
+            })
+            .optional(),
+        }),
+        response: {
+          200: z.object({
+            id: z.string(),
+          }),
+        },
+      },
+    },
+    (request, reply) => productController.updateProduct(request, reply),
   );
 }

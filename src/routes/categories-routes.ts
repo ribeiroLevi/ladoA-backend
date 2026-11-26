@@ -1,10 +1,7 @@
-import { request } from "node:http";
-import { string, z } from "zod";
+import { z } from "zod";
 import { CategoryController } from "../controllers/categories-controller.js";
 import { FastifyTypedInstanc } from "../types/fastify.js";
-import { Schema } from "zod/v3";
-import { id } from "zod/locales";
-import { describe } from "zod/v4/core";
+import { requireAdminAuth } from "../middleware/adminauth-middleware.js";
 
 const categoryController = new CategoryController();
 
@@ -13,7 +10,7 @@ export async function categoryRoutes(app: FastifyTypedInstanc) {
     "/category",
     {
       schema: {
-        tags: ["category"],
+        tags: ["Category"],
         description: "Lista as Categorias Disponíveis",
       },
     },
@@ -25,8 +22,9 @@ export async function categoryRoutes(app: FastifyTypedInstanc) {
   app.delete(
     "/category/:id",
     {
+      preHandler: requireAdminAuth,
       schema: {
-        tags: ["category"],
+        tags: ["Category"],
         description: "Deleção de Categorias",
         params: z.object({ id: z.uuid() }),
         response: {
@@ -42,18 +40,18 @@ export async function categoryRoutes(app: FastifyTypedInstanc) {
   app.patch(
     "/category/:id",
     {
+      preHandler: requireAdminAuth,
       schema: {
-        tags: ["category"],
+        tags: ["Category"],
         description: "Atualiza uma Categoria",
         params: z.object({
           id: z.uuid(),
         }),
         body: z.object({
-          id: z.uuid(),
           name: z.string().optional(),
           description: z.string().optional(),
         }),
-        reponse: {
+        response: {
           200: z.object({
             id: z.string(),
           }),
@@ -66,8 +64,9 @@ export async function categoryRoutes(app: FastifyTypedInstanc) {
   app.post(
     "/category",
     {
+      preHandler: requireAdminAuth,
       schema: {
-        tags: ["category"],
+        tags: ["Category"],
         description: "Criação de Categoria",
         body: z.object({
           name: z.string(),

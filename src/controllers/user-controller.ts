@@ -105,6 +105,15 @@ export class UserController {
           message: error.message,
         });
       }
+
+      if (
+        error instanceof Error &&
+        (error.message == "Email already in use" ||
+          error.message == "Username already in use")
+      ) {
+        return reply.status(409).send({ message: error.message });
+      }
+
       console.log(error);
       return reply.status(500).send({
         message: "Internal Server Error",

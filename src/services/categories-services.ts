@@ -1,67 +1,91 @@
-import { randomUUID } from "node:crypto";
-import { users } from "../database/users.js";
-import { categories } from "../database/categories.js";
+import { prisma } from "../database/prisma.js";
 import { CreateCategory, UpdateCategory } from "../types/categories.js";
 
 export class CategoriesService {
   async createCategory({ name, description }: CreateCategory) {
-    const tempCategory = categories.find(
-      (cat) => cat.name === name || cat.description === description,
-    );
+    const tempCategory = await prisma.categories.findFirst({
+      where: {
+        OR: [{ name }, { description }],
+      },
+    });
 
     if (tempCategory) {
       if (tempCategory.name === name) {
         throw new Error("This category name already exists");
-      } else if (tempCategory.description === description) {
+      }
+
+      if (tempCategory.description === description) {
         throw new Error("This category description already exists");
-      } else {
-        throw new Error("Category already exists");
       }
     }
 
-    const category = {
-      id: randomUUID(),
-      name,
-      description,
-    };
+    const category = await prisma.categories.create({
+      data: {
+        name,
+        description,
+      },
+    });
 
-    categories.push(category);
     return category;
   }
 
   async executeListCategories() {
+    const categories = await prisma.categories.findMany();
+
     return categories;
   }
 
   async deleteCategory(id: string) {
-    const categoryPosition = categories.findIndex(
-      (category) => category.id === id,
-    );
+    const category = await prisma.categories.findUnique({
+      where: {
+        id,
+      },
+    });
 
-    if (categoryPosition === -1) {
+    if (!category) {
       throw new Error("Category does not exist");
     }
 
-    categories.splice(categoryPosition, 1);
-    return categories;
+    // Produtos excluídos (lógico) também contam, porque continuam ligados à categoria
+    const productsCount = await prisma.products.count({
+      where: {
+        category_id: id,
+      },
+    });
+
+    if (productsCount > 0) {
+      throw new Error("Category has products");
+    }
+
+    await prisma.categories.delete({
+      where: {
+        id,
+      },
+    });
+
+    return category;
   }
 
   async updateCategory(data: UpdateCategory, id: string) {
-    const categoryPosition = categories.findIndex(
-      (category) => category.id === id,
-    );
-    const currentCategory = categories[categoryPosition];
+    const category = await prisma.categories.findUnique({
+      where: {
+        id,
+      },
+    });
 
-    const updatedCategory = {
-      ...currentCategory,
-      ...data,
-    };
-
-    if (categoryPosition === -1) {
+    if (!category) {
       throw new Error("Category does not exist");
     }
 
-    categories[categoryPosition] = updatedCategory;
+    const updatedCategory = await prisma.categories.update({
+      where: {
+        id,
+      },
+      data: {
+        name: data.name,
+        description: data.description,
+      },
+    });
 
     return updatedCategory;
   }

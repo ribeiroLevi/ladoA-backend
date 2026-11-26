@@ -30,14 +30,30 @@ export class UserService {
     const passwordHash = await argon2.hash(password);
 
     const user = await prisma.users.create({
-      data: { name, email, address, adm, login, password: passwordHash },
+      data: {
+        name,
+        email,
+        address,
+        adm: false,
+        login,
+        password: passwordHash,
+      },
     });
 
     return user;
   }
 
   async executeList() {
-    const users2 = await prisma.users.findMany();
+    const users2 = await prisma.users.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        address: true,
+        login: true,
+        adm: true,
+      },
+    });
     return users2;
   }
 
@@ -49,7 +65,7 @@ export class UserService {
     });
 
     if (!user) {
-      throw new Error("User not found");
+      throw new Error("User does not exist");
     }
 
     await prisma.users.delete({
@@ -92,6 +108,33 @@ export class UserService {
       throw new Error("User does not exist");
     }
 
+    // E-mail ou login já usados por outra conta
+    if (data.email) {
+      const emailUser = await prisma.users.findFirst({
+        where: {
+          email: data.email,
+          NOT: { id },
+        },
+      });
+
+      if (emailUser) {
+        throw new Error("Email already in use");
+      }
+    }
+
+    if (data.login) {
+      const loginUser = await prisma.users.findFirst({
+        where: {
+          login: data.login,
+          NOT: { id },
+        },
+      });
+
+      if (loginUser) {
+        throw new Error("Username already in use");
+      }
+    }
+
     let passwordHash: string | undefined;
 
     if (data.password) {
@@ -106,7 +149,6 @@ export class UserService {
         name: data.name,
         email: data.email,
         address: data.address,
-        adm: data.adm,
         login: data.login,
         password: passwordHash,
       },

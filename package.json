@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
+    "seed": "tsx prisma/seed.ts",
     "postinstall": "prisma skills sync || exit 0"
   },
   "keywords": [],
@@ -21,7 +22,9 @@
   "dependencies": {
     "@fastify/cookie": "^11.1.2",
     "@fastify/cors": "^11.3.0",
+    "@fastify/multipart": "^10.1.2",
     "@fastify/session": "^11.1.2",
+    "@fastify/static": "^10.1.5",
     "@fastify/swagger": "^9.8.1",
     "@fastify/swagger-ui": "^6.1.1",
     "@prisma/adapter-pg": "^7.10.0",

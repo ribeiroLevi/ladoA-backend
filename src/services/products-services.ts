@@ -1,7 +1,6 @@
-import { randomUUID } from "node:crypto";
-import { products } from "../database/produtcs.js";
 import { CreateProduct, UpdateProductDTO } from "../types/product.js";
 import { prisma } from "../database/prisma.js";
+import { deletePicture } from "../utils/picture.js";
 
 export class ProductService {
   async executeCreateProduct({
@@ -27,6 +26,27 @@ export class ProductService {
         name,
       },
     });
+
+    // Produto excluído (lógico) com o mesmo nome: volta a ser ativo com os dados novos
+    if (tempProduct && !tempProduct.active) {
+      const reactivatedProduct = await prisma.products.update({
+        where: {
+          id: tempProduct.id,
+        },
+        data: {
+          description,
+          quantity,
+          picture,
+          price,
+          category_id,
+          active: true,
+        },
+      });
+
+      await deletePicture(tempProduct.picture);
+
+      return reactivatedProduct;
+    }
 
     if (tempProduct) {
       const updatedProduct = await prisma.products.update({
@@ -64,7 +84,7 @@ export class ProductService {
       },
     });
 
-    if (!product) {
+    if (!product || !product.active) {
       throw new Error("Product does not exist");
     }
 
@@ -81,6 +101,10 @@ export class ProductService {
       },
     });
 
+    if (!product || !product.active) {
+      throw new Error("Product does not exist");
+    }
+
     const updatedProduct = await prisma.products.update({
       where: {
         id,
@@ -94,11 +118,26 @@ export class ProductService {
         category_id: data.category_id,
       },
     });
+
+    // Foto trocada ou removida: apaga o arquivo antigo do disco
+    if (data.picture !== undefined) {
+      await deletePicture(product.picture);
+    }
+
+    return updatedProduct;
   }
 
   async executeList() {
-    const productsDB = await prisma.products.findMany();
-    return productsDB;
+    const productsDB = await prisma.products.findMany({
+      where: {
+        active: true,
+      },
+    });
+
+    return productsDB.map((product) => ({
+      ...product,
+      price: Number(product.price),
+    }));
   }
 
   async deleteProduct(id: string) {
@@ -108,13 +147,17 @@ export class ProductService {
       },
     });
 
-    if (!product) {
-      throw new Error("Product not found");
+    if (!product || !product.active) {
+      throw new Error("Product does not exist");
     }
 
-    await prisma.products.delete({
+    // Exclusão lógica: o produto continua nas compras antigas
+    await prisma.products.update({
       where: {
         id,
+      },
+      data: {
+        active: false,
       },
     });
   }

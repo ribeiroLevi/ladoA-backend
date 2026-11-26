@@ -5,8 +5,9 @@ import {
   DeleteProductParams,
   FindProductParams,
   PatchProductsParams,
-  UpdateProductDTO,
+  UpdateProductBody,
 } from "../types/product.js";
+import { deletePicture, savePicture } from "../utils/picture.js";
 
 export class ProductController {
   private productService: ProductService;
@@ -15,24 +16,50 @@ export class ProductController {
     this.productService = new ProductService();
   }
 
-  async createProduct(
-    request: FastifyRequest<{ Body: CreateProduct }>,
-    reply: FastifyReply,
-  ) {
+  async createProduct(request: FastifyRequest, reply: FastifyReply) {
+    const { name, description, quantity, price, category_id, picture } =
+      request.body as {
+        name: string;
+        description: string;
+        quantity: number;
+        price: number;
+        category_id: string;
+        picture: Buffer;
+      };
+
+    let picturePath: string | undefined;
+
     try {
-      const { name, description, quantity, picture, price, category_id } =
-        request.body;
+      picturePath = await savePicture(picture);
+
       const product = await this.productService.executeCreateProduct({
         name,
         description,
         quantity,
-        picture,
         price,
         category_id,
+        picture: picturePath,
       });
 
-      return reply.status(201).send();
+      // Nome já existente: só somou a quantidade, então a foto nova não é usada
+      if (product.picture !== picturePath) {
+        await deletePicture(picturePath);
+      }
+
+      return reply.status(201).send(product);
     } catch (error) {
+      if (picturePath) {
+        await deletePicture(picturePath);
+      }
+
+      if (error instanceof Error && error.message == "Invalid image type") {
+        return reply.status(400).send({ message: error.message });
+      }
+
+      if (error instanceof Error && error.message == "Category does not exist") {
+        return reply.status(404).send({ message: error.message });
+      }
+
       return reply.status(500).send({ message: "Internal Server Error" });
     }
   }
@@ -64,17 +91,40 @@ export class ProductController {
 
   async updateProduct(
     request: FastifyRequest<{
-      Body: UpdateProductDTO;
+      Body: UpdateProductBody;
       Params: PatchProductsParams;
     }>,
     reply: FastifyReply,
   ) {
+    let picturePath: string | null | undefined;
+
     try {
-      const data = request.body;
+      const { picture, remove_picture, ...data } = request.body;
       const params = request.params;
-      await this.productService.updateProduct(data, params.id);
+
+      if (remove_picture === "true") {
+        picturePath = null;
+      }
+
+      if (picture && picture.length > 0) {
+        picturePath = await savePicture(picture);
+      }
+
+      await this.productService.updateProduct(
+        { ...data, picture: picturePath },
+        params.id,
+      );
+
       return reply.status(200).send("Product Updated Sucessfully");
     } catch (error) {
+      if (picturePath) {
+        await deletePicture(picturePath);
+      }
+
+      if (error instanceof Error && error.message == "Invalid image type") {
+        return reply.status(400).send({ message: error.message });
+      }
+
       if (error instanceof Error && error.message == "Product does not exist") {
         return reply.status(404).send({
           message: error.message,

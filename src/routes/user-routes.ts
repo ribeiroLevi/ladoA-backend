@@ -1,6 +1,8 @@
-import { string, z } from "zod";
+import { z } from "zod";
 import { FastifyTypedInstanc } from "../types/fastify.js";
 import { UserController } from "../controllers/user-controller.js";
+import { requireAdminAuth } from "../middleware/adminauth-middleware.js";
+import { requireOwnerOrAdmin } from "../middleware/owner-middleware.js";
 
 const userController = new UserController();
 
@@ -8,6 +10,7 @@ export async function userRoutes(app: FastifyTypedInstanc) {
   app.get(
     "/user",
     {
+      preHandler: requireAdminAuth,
       schema: {
         tags: ["Users"],
         description: "Listagem de Usuários",
@@ -21,13 +24,18 @@ export async function userRoutes(app: FastifyTypedInstanc) {
   app.get(
     "/user/:id",
     {
+      preHandler: requireOwnerOrAdmin,
       schema: {
         tags: ["Users"],
         description: "Busca um usuário",
         params: z.object({ id: z.string() }),
         response: {
           200: z.object({
-            id: string(),
+            id: z.uuid(),
+            name: z.string(),
+            address: z.string(),
+            email: z.email(),
+            login: z.string(),
           }),
         },
       },
@@ -40,6 +48,7 @@ export async function userRoutes(app: FastifyTypedInstanc) {
   app.delete(
     "/user/:id",
     {
+      preHandler: requireOwnerOrAdmin,
       schema: {
         tags: ["Users"],
         description: "Deleção de Usuários",
@@ -57,6 +66,7 @@ export async function userRoutes(app: FastifyTypedInstanc) {
   app.patch(
     "/user/:id",
     {
+      preHandler: requireOwnerOrAdmin,
       schema: {
         tags: ["Users"],
         description: "Atualização de Usuários",
@@ -69,7 +79,6 @@ export async function userRoutes(app: FastifyTypedInstanc) {
           address: z.string().optional(),
           login: z.string().optional(),
           password: z.string().optional(),
-          adm: z.boolean().optional(),
         }),
         response: {
           200: z.object({
@@ -93,7 +102,6 @@ export async function userRoutes(app: FastifyTypedInstanc) {
           address: z.string(),
           login: z.string(),
           password: z.string(),
-          adm: z.boolean(),
         }),
         response: {
           201: z.object({

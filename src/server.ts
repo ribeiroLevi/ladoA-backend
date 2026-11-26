@@ -1,7 +1,6 @@
 import "dotenv/config";
 
 import { fastify } from "fastify";
-import { fastifyCors } from "@fastify/cors";
 import {
   validatorCompiler,
   serializerCompiler,
@@ -17,8 +16,31 @@ import { fastifySession } from "@fastify/session";
 import { categoryRoutes } from "./routes/categories-routes.js";
 import { productRoutes } from "./routes/products-routes.js";
 import { saleRoutes } from "./routes/sale-routes.js";
+import cors from "@fastify/cors";
+
+import multipart from "@fastify/multipart";
+import fastifyStatic from "@fastify/static";
+import path from "node:path";
 
 const app = fastify().withTypeProvider<ZodTypeProvider>();
+
+await app.register(multipart, {
+  attachFieldsToBody: "keyValues",
+  limits: {
+    fileSize: 5 * 1024 * 1024,
+  },
+});
+
+await app.register(cors, {
+  origin: process.env.FRONTEND_URL ?? "http://localhost:3000",
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
+});
+await app.register(fastifyStatic, {
+  root: path.join(process.cwd(), "uploads"),
+  prefix: "/uploads/",
+});
 
 app.setValidatorCompiler(validatorCompiler);
 app.setSerializerCompiler(serializerCompiler);
@@ -26,20 +48,18 @@ app.setSerializerCompiler(serializerCompiler);
 app.register(fastifyCookie);
 
 app.register(fastifySession, {
-  secret: "5tgA{?!pBkG)0]8Bkx+!pJcJY#[U(:&2",
+  secret: process.env.SESSION_SECRET!,
   cookie: {
     secure: false,
   },
 });
-
-app.register(fastifyCors, { origin: "*" });
 
 app.register(fastifySwagger, {
   openapi: {
     openapi: "3.0.3",
     info: {
       title: "Ecommerce",
-      version: "0.0.6",
+      version: "1.0.0",
     },
   },
   transform: jsonSchemaTransform,
@@ -59,10 +79,6 @@ app.register(authRoutes);
 app.register(categoryRoutes);
 app.register(productRoutes);
 app.register(saleRoutes);
-
-app.ready().then(() => {
-  console.log(JSON.stringify(app.swagger(), null, 2));
-});
 
 //porta da API
 app.listen({ port: 3333 }).then(() => {

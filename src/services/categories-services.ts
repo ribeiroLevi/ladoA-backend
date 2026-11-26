@@ -46,6 +46,17 @@ export class CategoriesService {
       throw new Error("Category does not exist");
     }
 
+    // Produtos excluídos (lógico) também contam, porque continuam ligados à categoria
+    const productsCount = await prisma.products.count({
+      where: {
+        category_id: id,
+      },
+    });
+
+    if (productsCount > 0) {
+      throw new Error("Category has products");
+    }
+
     await prisma.categories.delete({
       where: {
         id,
